@@ -1,7 +1,9 @@
+// app/page.tsx
 import { getCars, dollars } from '../lib/api';
 
 type Props = { searchParams: { [k: string]: string | string[] | undefined } };
 
+// Build a link with updated query params (keeps existing filters)
 function linkFor(params: Record<string, any>) {
   const s = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => {
@@ -10,12 +12,30 @@ function linkFor(params: Record<string, any>) {
   return `/?${s.toString()}`;
 }
 
+// Helper to fetch the first image URL for a car (server-side)
+// Uses your API + NEXT_PUBLIC_S3_PUBLIC_BASE to construct a public URL
+async function getCoverUrl(carId: string): Promise<string | null> {
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3001/api';
+  const PUBLIC_IMAGE_BASE = process.env.NEXT_PUBLIC_S3_PUBLIC_BASE;
+
+  try {
+    const res = await fetch(`${API_BASE}/cars/${carId}/images`, { cache: 'no-store' });
+    if (!res.ok) return null;
+    const imgs: { s3KeyOriginal: string }[] = await res.json();
+    if (!imgs.length || !PUBLIC_IMAGE_BASE) return null;
+    return `${PUBLIC_IMAGE_BASE}/${imgs[0].s3KeyOriginal}`;
+  } catch {
+    return null;
+  }
+}
+
 export default async function Home({ searchParams }: Props) {
   const title = process.env.NEXT_PUBLIC_SITE_NAME || 'Jimag Autos Marketplace';
 
   const page = Number(searchParams.page ?? 1);
   const pageSize = Number(searchParams.pageSize ?? 12);
 
+  // Fetch list with filters/sort/pagination
   const data = await getCars({
     make: searchParams.make as string | undefined,
     model: searchParams.model as string | undefined,
@@ -29,6 +49,14 @@ export default async function Home({ searchParams }: Props) {
   });
 
   const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize));
+
+  // Preload a cover image URL (if any) for each car — do this BEFORE rendering
+  const cards = await Promise.all(
+    data.items.map(async (c) => {
+      const cover = await getCoverUrl(c.id);
+      return { car: c, cover };
+    })
+  );
 
   return (
     <main style={{ padding: 24, maxWidth: 1100, margin: '0 auto' }}>
@@ -52,9 +80,17 @@ export default async function Home({ searchParams }: Props) {
       </form>
 
       <h2 style={{ marginTop: 24 }}>Results ({data.total})</h2>
+
       <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
-        {data.items.map((c) => (
+        {cards.map(({ car: c, cover }) => (
           <a key={c.id} href={`/cars/${c.id}`} style={{ border: '1px solid #eee', borderRadius: 8, padding: 12, textDecoration: 'none', color: 'inherit' }}>
+            {cover && (
+              <img
+                src={cover}
+                alt=""
+                style={{ width: '100%', height: 140, objectFit: 'cover', borderRadius: 6, marginBottom: 8 }}
+              />
+            )}
             <div style={{ fontWeight: 700 }}>{c.make} {c.model}</div>
             <div>{c.year} · {c.mileage.toLocaleString()} miles</div>
             <div style={{ marginTop: 6, fontWeight: 700 }}>{dollars(c.priceCents)}</div>
@@ -65,13 +101,19 @@ export default async function Home({ searchParams }: Props) {
 
       {/* Pagination */}
       <div style={{ marginTop: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
-        <a href={linkFor({ ...searchParams, page: Math.max(1, page - 1) })} aria-disabled={page <= 1}
-           style={{ pointerEvents: page <= 1 ? 'none' : 'auto', opacity: page <= 1 ? 0.4 : 1 }}>
+        <a
+          href={linkFor({ ...searchParams, page: Math.max(1, page - 1) })}
+          aria-disabled={page <= 1}
+          style={{ pointerEvents: page <= 1 ? 'none' : 'auto', opacity: page <= 1 ? 0.4 : 1 }}
+        >
           ← Prev
         </a>
         <span>Page {page} / {totalPages}</span>
-        <a href={linkFor({ ...searchParams, page: Math.min(totalPages, page + 1) })} aria-disabled={page >= totalPages}
-           style={{ pointerEvents: page >= totalPages ? 'none' : 'auto', opacity: page >= totalPages ? 0.4 : 1 }}>
+        <a
+          href={linkFor({ ...searchParams, page: Math.min(totalPages, page + 1) })}
+          aria-disabled={page >= totalPages}
+          style={{ pointerEvents: page >= totalPages ? 'none' : 'auto', opacity: page >= totalPages ? 0.4 : 1 }}
+        >
           Next →
         </a>
       </div>
