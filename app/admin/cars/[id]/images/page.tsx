@@ -1,11 +1,16 @@
-// app/admin/cars/[id]/images/page.tsx
 'use client';
 
 import { useState } from 'react';
 import { presignUpload, registerImage } from '../../../../../lib/api';
 
 export default function UploadImages({ params }: { params: { id: string } }) {
-  if (process.env.NEXT_PUBLIC_ENABLE_LOCAL_UPLOADS !== 'true') {
+  // ✅ Hooks at the top, always called
+  const [status, setStatus] = useState<string>('');
+
+  const enabled = process.env.NEXT_PUBLIC_ENABLE_LOCAL_UPLOADS === 'true';
+
+  if (!enabled) {
+    // ⛔️ Early return is fine *after* hooks are declared
     return (
       <main style={{ padding: 24 }}>
         <h1>Uploads disabled</h1>
@@ -13,8 +18,6 @@ export default function UploadImages({ params }: { params: { id: string } }) {
       </main>
     );
   }
-
-  const [status, setStatus] = useState<string>('');
 
   async function onFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
@@ -27,10 +30,7 @@ export default function UploadImages({ params }: { params: { id: string } }) {
 
         setStatus(`Uploading ${file.name} to S3...`);
         const put = await fetch(sig.url, { method: 'PUT', headers: sig.headers, body: file });
-        if (!put.ok) {
-          setStatus(`Upload failed (${put.status}): ${file.name}`);
-          return;
-        }
+        if (!put.ok) { setStatus(`Upload failed (${put.status}): ${file.name}`); return; }
 
         setStatus(`Registering ${file.name}...`);
         await registerImage(params.id, sig.key, file.name);
@@ -41,7 +41,6 @@ export default function UploadImages({ params }: { params: { id: string } }) {
         return;
       }
     }
-
     setStatus('Done. Reload the car detail page to see images.');
   }
 
