@@ -1,7 +1,16 @@
+import { notFound } from 'next/navigation';
 import { getCar, dollars, getCarImages, imgUrl } from '../../../lib/api';
 
 export default async function CarDetail({ params }: { params: { id: string } }) {
-  const [car, images] = await Promise.all([ getCar(params.id), getCarImages(params.id) ]);
+  const [car, images] = await Promise.all([
+    getCar(params.id),
+    getCarImages(params.id),
+  ]);
+
+  if (!car) {
+    // If getCar returned null (because API sent 404), show the special 404 page
+    notFound();
+  }
 
   return (
     <main style={{ padding: 24, maxWidth: 900, margin: '0 auto' }}>
@@ -10,10 +19,19 @@ export default async function CarDetail({ params }: { params: { id: string } }) 
       {/* simple gallery */}
       {images.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12, marginTop: 12 }}>
-          <img src={imgUrl(images[0].s3KeyOriginal)} alt={images[0].altText || ''} style={{ width: '100%', height: 360, objectFit: 'cover', borderRadius: 8 }} />
+          <img
+            src={imgUrl(images[0].s3KeyOriginal)}
+            alt={images[0].altText || ''}
+            style={{ width: '100%', height: 360, objectFit: 'cover', borderRadius: 8 }}
+          />
           <div style={{ display: 'grid', gridTemplateRows: 'repeat(3, 1fr)', gap: 8 }}>
-            {images.slice(1,4).map((im) => (
-              <img key={im.id} src={imgUrl(im.s3KeyOriginal)} alt={im.altText || ''} style={{ width: '100%', height: 110, objectFit: 'cover', borderRadius: 8 }} />
+            {images.slice(1, 4).map((im) => (
+              <img
+                key={im.id}
+                src={imgUrl(im.s3KeyOriginal)}
+                alt={im.altText || ''}
+                style={{ width: '100%', height: 110, objectFit: 'cover', borderRadius: 8 }}
+              />
             ))}
           </div>
         </div>

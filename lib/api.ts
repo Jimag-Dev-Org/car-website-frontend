@@ -32,15 +32,32 @@ export async function getCars(params: Partial<Record<string, string | number>> =
 
 export async function getCar(id: string) {
   const res = await fetch(`${API_BASE}/cars/${id}`, { cache: 'no-store' });
-  if (!res.ok) throw new Error('Failed to fetch car');
+
+  if (res.status === 404) {
+    return null; // signal "car not found"
+  }
+
+  if (!res.ok) {
+    throw new Error('Failed to fetch car');
+  }
+
   return res.json() as Promise<Car>;
 }
 
 export async function getCarImages(id: string) {
   const res = await fetch(`${API_BASE}/cars/${id}/images`, { cache: 'no-store' });
-  if (!res.ok) throw new Error('Failed to fetch images');
+
+  if (res.status === 404) {
+    return []; // no images if car not found
+  }
+
+  if (!res.ok) {
+    throw new Error('Failed to fetch car images');
+  }
+
   return res.json() as Promise<CarImage[]>;
 }
+
 
 export async function presignUpload(carId: string, file: File) {
   const ext = '.' + (file.name.split('.').pop() || 'bin');
