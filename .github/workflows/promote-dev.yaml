@@ -22,7 +22,7 @@ env:
   ECR_REPO: 329551316753.dkr.ecr.us-east-1.amazonaws.com/jimag-dev-car-website-frontend
 
   GITOPS_REPO: Jimag-Dev-Org/Jimag-GitOps
-  GITOPS_KUSTOMIZATION: apps/frontend/overlays/dev/patch-env.yaml
+  GITOPS_KUSTOMIZATION: apps/frontend/overlays/dev/kustomization.yaml
   KUSTOMIZE_IMAGE_NAME: 329551316753.dkr.ecr.us-east-1.amazonaws.com/jimag-dev-car-website-frontend
 
 jobs:
@@ -71,7 +71,7 @@ jobs:
           token: ${{ secrets.GITOPS_PAT }}
           path: gitops
 
-      - name: Update GitOps image (patch-env.yaml)
+      - name: Update GitOps image kustomization.yaml (new tag only)
         working-directory: gitops
         run: |
           YQ_VERSION=v4.44.3
