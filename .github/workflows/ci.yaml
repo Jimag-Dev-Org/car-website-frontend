@@ -78,12 +78,13 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Trivy scan (report only)
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          image-ref: ${{ env.ECR_REPO }}:${{ env.IMAGE_TAG }}
-          format: table
-          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
-          ignore-unfixed: true
-          vuln-type: os,library
-          exit-code: "0"
+      - name: Trivy scan (report only, Docker)
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:0.56.1 \
+            image --exit-code 0 --no-progress --ignore-unfixed \
+            --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL \
+            "${ECR_REPO}:${IMAGE_TAG}"
+
+          
