@@ -62,7 +62,7 @@ jobs:
 
           docker build -t "$ECR_REPO:$IMAGE_TAG" .
           docker push "$ECR_REPO:$IMAGE_TAG"
-          echo "Pushed: $ECR_REPO:$IMAGE_TAG"
+          echo "Pushed: $ECR_REPO:$IMAGE_TAG"   # pushing image to ecr 
 
       - name: Checkout GitOps repo
         uses: actions/checkout@v4
